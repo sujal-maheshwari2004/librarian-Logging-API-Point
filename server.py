@@ -44,6 +44,14 @@ async def dashboard():
     with open("static/index.html") as f:
         return f.read()
 
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "service": "training-dashboard",
+        "timestamp": __import__("time").time()
+    }
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
