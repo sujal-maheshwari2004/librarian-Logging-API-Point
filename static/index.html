@@ -20,6 +20,24 @@ body{
     font-size:22px;
     text-align:center;
     font-weight:bold;
+    position:relative;
+}
+
+.clear-btn{
+    position:absolute;
+    right:20px;
+    top:12px;
+    background:#ef4444;
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.clear-btn:hover{
+    background:#dc2626;
 }
 
 .container{
@@ -77,6 +95,7 @@ tr:nth-child(odd){
 
 <div class="header">
 LLM Training Dashboard
+<button class="clear-btn" onclick="clearMetrics()">Clear Data</button>
 </div>
 
 <div class="container">
@@ -134,9 +153,7 @@ plugins:{
 legend:{labels:{color:"white"}}
 },
 scales:{
-x:{
-ticks:{color:"white"}
-},
+x:{ticks:{color:"white"}},
 y:{
 ticks:{color:"white"},
 grid:{color:"#334155"}
@@ -269,6 +286,33 @@ tokChart.update();
 gpuChart.update();
 
 updateTable(data);
+
+}
+
+async function clearMetrics(){
+
+if(!confirm("Clear all dashboard data?")) return;
+
+await fetch("/clear",{method:"POST"});
+
+lossChart.data.labels=[];
+lossChart.data.datasets.forEach(d=>d.data=[]);
+
+lrChart.data.labels=[];
+lrChart.data.datasets.forEach(d=>d.data=[]);
+
+tokChart.data.labels=[];
+tokChart.data.datasets.forEach(d=>d.data=[]);
+
+gpuChart.data.labels=[];
+gpuChart.data.datasets.forEach(d=>d.data=[]);
+
+lossChart.update();
+lrChart.update();
+tokChart.update();
+gpuChart.update();
+
+document.querySelector("#metricsTable tbody").innerHTML="";
 
 }
 
