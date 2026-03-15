@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>LLM Training Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    font-family:Arial;
+    background:#0f172a;
+    color:white;
+    margin:0;
+}
+
+.header{
+    background:#1e293b;
+    padding:20px;
+    font-size:24px;
+}
+
+.container{
+    padding:20px;
+}
+
+.card{
+    background:#1e293b;
+    padding:15px;
+    margin:10px;
+    border-radius:10px;
+    display:inline-block;
+}
+
+canvas{
+    background:white;
+    border-radius:10px;
+    padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+LLM Training Dashboard
+</div>
+
+<div class="container">
+
+<h3>Loss</h3>
+<canvas id="lossChart"></canvas>
+
+<h3>Learning Rate</h3>
+<canvas id="lrChart"></canvas>
+
+<h3>Throughput</h3>
+<canvas id="tokChart"></canvas>
+
+<h3>GPU Memory</h3>
+<canvas id="gpuChart"></canvas>
+
+</div>
+
+<script>
+
+let lossChart = new Chart(
+document.getElementById("lossChart"),
+{
+type:"line",
+data:{
+labels:[],
+datasets:[
+{
+label:"Train Loss",
+data:[],
+borderColor:"cyan",
+fill:false
+},
+{
+label:"Validation Loss",
+data:[],
+borderColor:"orange",
+fill:false
+}
+]
+},
+options:{animation:false}
+}
+);
+
+let lrChart = new Chart(
+document.getElementById("lrChart"),
+{
+type:"line",
+data:{
+labels:[],
+datasets:[
+{
+label:"Learning Rate",
+data:[],
+borderColor:"lime",
+fill:false
+}
+]
+},
+options:{animation:false}
+}
+);
+
+let tokChart = new Chart(
+document.getElementById("tokChart"),
+{
+type:"line",
+data:{
+labels:[],
+datasets:[
+{
+label:"Tokens/sec",
+data:[],
+borderColor:"magenta",
+fill:false
+}
+]
+},
+options:{animation:false}
+}
+);
+
+let gpuChart = new Chart(
+document.getElementById("gpuChart"),
+{
+type:"line",
+data:{
+labels:[],
+datasets:[
+{
+label:"GPU Memory GB",
+data:[],
+borderColor:"yellow",
+fill:false
+}
+]
+},
+options:{animation:false}
+}
+);
+
+
+async function updateCharts(){
+
+const res = await fetch("/metrics");
+const data = await res.json();
+
+if(data.length === 0) return;
+
+const train = data.filter(x => x.type === "train");
+const evals = data.filter(x => x.type === "eval");
+
+lossChart.data.labels = train.map(x=>x.step);
+lossChart.data.datasets[0].data = train.map(x=>x.loss);
+
+lossChart.data.datasets[1].data =
+evals.map(x=>({x:x.step,y:x.val_loss}));
+
+lrChart.data.labels = train.map(x=>x.step);
+lrChart.data.datasets[0].data =
+train.map(x=>x.lr);
+
+tokChart.data.labels = train.map(x=>x.step);
+tokChart.data.datasets[0].data =
+train.map(x=>x.tokens_per_sec);
+
+gpuChart.data.labels = train.map(x=>x.step);
+gpuChart.data.datasets[0].data =
+train.map(x=>x.gpu_mem_gb);
+
+lossChart.update();
+lrChart.update();
+tokChart.update();
+gpuChart.update();
+
+}
+
+setInterval(updateCharts,1000);
+
+</script>
+
+</body>
+</html>
