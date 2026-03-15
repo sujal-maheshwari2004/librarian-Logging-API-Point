@@ -30,12 +30,10 @@ padding:20px;
 }
 
 .poster{
-
 background:#1e293b;
 padding:20px;
 border-radius:12px;
 text-align:center;
-
 }
 
 .poster h2{
@@ -67,9 +65,7 @@ height:240px !important;
 }
 
 .table-container{
-
 padding:20px;
-
 }
 
 table{
@@ -180,6 +176,7 @@ return{
 label:label,
 data:[],
 borderColor:color,
+backgroundColor:color,
 borderWidth:2,
 pointRadius:3,
 tension:0.25,
@@ -288,7 +285,7 @@ const steps=train.map(x=>x.step)
 
 lossChart.data.labels=steps
 lossChart.data.datasets[0].data=train.map(x=>x.loss??null)
-lossChart.data.datasets[1].data=evals.map(x=>({x:x.step,y:x.val_loss}))
+lossChart.data.datasets[1].data=evals.map(x=>x.val_loss??null)
 
 
 lrChart.data.labels=steps
@@ -333,7 +330,6 @@ document.getElementById("val").innerText=lastEval.val_loss?.toFixed(3)??"-"
 
 
 document.getElementById("status").innerText="running"
-
 
 updateTable(data)
 
