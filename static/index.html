@@ -6,8 +6,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
 body{
-    font-family:Arial;
+    font-family:Arial, Helvetica, sans-serif;
     background:#0f172a;
     color:white;
     margin:0;
@@ -15,27 +16,60 @@ body{
 
 .header{
     background:#1e293b;
-    padding:20px;
-    font-size:24px;
+    padding:15px;
+    font-size:22px;
+    text-align:center;
+    font-weight:bold;
 }
 
 .container{
-    padding:20px;
+    padding:15px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap:20px;
 }
 
 .card{
     background:#1e293b;
     padding:15px;
-    margin:10px;
     border-radius:10px;
-    display:inline-block;
 }
 
 canvas{
     background:white;
-    border-radius:10px;
-    padding:10px;
+    border-radius:8px;
+    height:200px !important;
 }
+
+.table-container{
+    grid-column: span 2;
+    background:#1e293b;
+    padding:15px;
+    border-radius:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#334155;
+}
+
+tr:nth-child(even){
+    background:#1e293b;
+}
+
+tr:nth-child(odd){
+    background:#0f172a;
+}
+
 </style>
 </head>
 
@@ -47,21 +81,82 @@ LLM Training Dashboard
 
 <div class="container">
 
+<div class="card">
 <h3>Loss</h3>
 <canvas id="lossChart"></canvas>
+</div>
 
+<div class="card">
 <h3>Learning Rate</h3>
 <canvas id="lrChart"></canvas>
+</div>
 
-<h3>Throughput</h3>
+<div class="card">
+<h3>Throughput (Tokens/sec)</h3>
 <canvas id="tokChart"></canvas>
+</div>
 
-<h3>GPU Memory</h3>
+<div class="card">
+<h3>GPU Memory (GB)</h3>
 <canvas id="gpuChart"></canvas>
+</div>
+
+<div class="table-container">
+<h3>Latest Metrics</h3>
+
+<table id="metricsTable">
+<thead>
+<tr>
+<th>Step</th>
+<th>Train Loss</th>
+<th>Val Loss</th>
+<th>LR</th>
+<th>Grad Norm</th>
+<th>Tokens/sec</th>
+<th>GPU GB</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+
+</div>
 
 </div>
 
 <script>
+
+function chartOptions(){
+return {
+animation:false,
+responsive:true,
+plugins:{
+legend:{labels:{color:"white"}}
+},
+scales:{
+x:{
+ticks:{color:"white"}
+},
+y:{
+ticks:{color:"white"},
+grid:{color:"#334155"}
+}
+}
+};
+}
+
+function dataset(label,color){
+return {
+label:label,
+data:[],
+borderColor:color,
+borderWidth:2,
+pointRadius:4,
+pointHoverRadius:6,
+fill:false,
+tension:0.25
+};
+}
 
 let lossChart = new Chart(
 document.getElementById("lossChart"),
@@ -70,21 +165,11 @@ type:"line",
 data:{
 labels:[],
 datasets:[
-{
-label:"Train Loss",
-data:[],
-borderColor:"cyan",
-fill:false
-},
-{
-label:"Validation Loss",
-data:[],
-borderColor:"orange",
-fill:false
-}
+dataset("Train Loss","cyan"),
+dataset("Validation Loss","orange")
 ]
 },
-options:{animation:false}
+options:chartOptions()
 }
 );
 
@@ -94,16 +179,9 @@ document.getElementById("lrChart"),
 type:"line",
 data:{
 labels:[],
-datasets:[
-{
-label:"Learning Rate",
-data:[],
-borderColor:"lime",
-fill:false
-}
-]
+datasets:[dataset("Learning Rate","lime")]
 },
-options:{animation:false}
+options:chartOptions()
 }
 );
 
@@ -113,16 +191,9 @@ document.getElementById("tokChart"),
 type:"line",
 data:{
 labels:[],
-datasets:[
-{
-label:"Tokens/sec",
-data:[],
-borderColor:"magenta",
-fill:false
-}
-]
+datasets:[dataset("Tokens/sec","magenta")]
 },
-options:{animation:false}
+options:chartOptions()
 }
 );
 
@@ -132,19 +203,37 @@ document.getElementById("gpuChart"),
 type:"line",
 data:{
 labels:[],
-datasets:[
-{
-label:"GPU Memory GB",
-data:[],
-borderColor:"yellow",
-fill:false
-}
-]
+datasets:[dataset("GPU Memory","yellow")]
 },
-options:{animation:false}
+options:chartOptions()
 }
 );
 
+function updateTable(data){
+
+const tbody = document.querySelector("#metricsTable tbody");
+tbody.innerHTML = "";
+
+const latest = data.slice(-10).reverse();
+
+latest.forEach(m=>{
+
+const row = document.createElement("tr");
+
+row.innerHTML = `
+<td>${m.step ?? ""}</td>
+<td>${m.loss?.toFixed(4) ?? ""}</td>
+<td>${m.val_loss?.toFixed(4) ?? ""}</td>
+<td>${m.lr?.toExponential(2) ?? ""}</td>
+<td>${m.grad_norm?.toFixed(2) ?? ""}</td>
+<td>${m.tokens_per_sec ?? ""}</td>
+<td>${m.gpu_mem_gb?.toFixed(2) ?? ""}</td>
+`;
+
+tbody.appendChild(row);
+
+});
+}
 
 async function updateCharts(){
 
@@ -153,8 +242,8 @@ const data = await res.json();
 
 if(data.length === 0) return;
 
-const train = data.filter(x => x.type === "train");
-const evals = data.filter(x => x.type === "eval");
+const train = data.filter(x=>x.type==="train");
+const evals = data.filter(x=>x.type==="eval");
 
 lossChart.data.labels = train.map(x=>x.step);
 lossChart.data.datasets[0].data = train.map(x=>x.loss);
@@ -178,6 +267,8 @@ lossChart.update();
 lrChart.update();
 tokChart.update();
 gpuChart.update();
+
+updateTable(data);
 
 }
 
