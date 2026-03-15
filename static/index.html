@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <title>LLM Training Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -8,84 +9,92 @@
 <style>
 
 body{
-    font-family:Arial, Helvetica, sans-serif;
-    background:#0f172a;
-    color:white;
-    margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
+margin:0;
 }
 
 .header{
-    background:#1e293b;
-    padding:15px;
-    font-size:22px;
-    text-align:center;
-    font-weight:bold;
-    position:relative;
-}
-
-.clear-btn{
-    position:absolute;
-    right:20px;
-    top:12px;
-    background:#ef4444;
-    color:white;
-    border:none;
-    padding:8px 14px;
-    border-radius:6px;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-.clear-btn:hover{
-    background:#dc2626;
+background:#1e293b;
+padding:15px;
+text-align:center;
+font-size:24px;
+font-weight:bold;
 }
 
 .container{
-    padding:15px;
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    grid-gap:20px;
+padding:20px;
+display:grid;
+grid-template-columns:1fr 1fr;
+grid-gap:20px;
+}
+
+.metric-grid{
+grid-column:span 2;
+display:grid;
+grid-template-columns:repeat(4,1fr);
+grid-gap:15px;
+}
+
+.poster{
+
+background:#1e293b;
+padding:20px;
+border-radius:10px;
+text-align:center;
+
+}
+
+.poster h2{
+margin:0;
+font-size:32px;
+}
+
+.poster p{
+margin:5px;
+color:#94a3b8;
 }
 
 .card{
-    background:#1e293b;
-    padding:15px;
-    border-radius:10px;
+background:#1e293b;
+padding:15px;
+border-radius:10px;
 }
 
 canvas{
-    background:white;
-    border-radius:8px;
-    height:200px !important;
+background:white;
+border-radius:8px;
+height:220px !important;
 }
 
 .table-container{
-    grid-column: span 2;
-    background:#1e293b;
-    padding:15px;
-    border-radius:10px;
+grid-column:span 2;
+background:#1e293b;
+padding:15px;
+border-radius:10px;
 }
 
 table{
-    width:100%;
-    border-collapse:collapse;
+width:100%;
+border-collapse:collapse;
 }
 
 th,td{
-    padding:8px;
-    text-align:center;
+padding:8px;
+text-align:center;
 }
 
 th{
-    background:#334155;
+background:#334155;
 }
 
 tr:nth-child(even){
-    background:#1e293b;
+background:#1e293b;
 }
 
 tr:nth-child(odd){
-    background:#0f172a;
+background:#0f172a;
 }
 
 </style>
@@ -95,10 +104,53 @@ tr:nth-child(odd){
 
 <div class="header">
 LLM Training Dashboard
-<button class="clear-btn" onclick="clearMetrics()">Clear Data</button>
 </div>
 
 <div class="container">
+
+<div class="metric-grid">
+
+<div class="poster">
+<p>Current Step</p>
+<h2 id="stepPoster">0</h2>
+</div>
+
+<div class="poster">
+<p>Train Loss</p>
+<h2 id="lossPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>Validation Loss</p>
+<h2 id="valPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>Tokens/sec</p>
+<h2 id="tokPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>Learning Rate</p>
+<h2 id="lrPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>Grad Norm</p>
+<h2 id="gradPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>GPU Memory</p>
+<h2 id="gpuPoster">-</h2>
+</div>
+
+<div class="poster">
+<p>Status</p>
+<h2 id="statusPoster">Waiting</h2>
+</div>
+
+</div>
 
 <div class="card">
 <h3>Loss</h3>
@@ -111,32 +163,37 @@ LLM Training Dashboard
 </div>
 
 <div class="card">
-<h3>Throughput (Tokens/sec)</h3>
+<h3>Tokens/sec</h3>
 <canvas id="tokChart"></canvas>
 </div>
 
 <div class="card">
-<h3>GPU Memory (GB)</h3>
-<canvas id="gpuChart"></canvas>
+<h3>Gradient Norm</h3>
+<canvas id="gradChart"></canvas>
 </div>
 
 <div class="table-container">
+
 <h3>Latest Metrics</h3>
 
 <table id="metricsTable">
+
 <thead>
+
 <tr>
 <th>Step</th>
 <th>Train Loss</th>
 <th>Val Loss</th>
 <th>LR</th>
-<th>Grad Norm</th>
-<th>Tokens/sec</th>
-<th>GPU GB</th>
+<th>Grad</th>
+<th>Tokens/s</th>
+<th>GPU</th>
 </tr>
+
 </thead>
-<tbody>
-</tbody>
+
+<tbody></tbody>
+
 </table>
 
 </div>
@@ -145,178 +202,242 @@ LLM Training Dashboard
 
 <script>
 
-function chartOptions(){
-return {
-animation:false,
-responsive:true,
-plugins:{
-legend:{labels:{color:"white"}}
-},
-scales:{
-x:{ticks:{color:"white"}},
-y:{
-ticks:{color:"white"},
-grid:{color:"#334155"}
-}
-}
-};
-}
-
 function dataset(label,color){
-return {
+
+return{
+
 label:label,
 data:[],
 borderColor:color,
 borderWidth:2,
-pointRadius:4,
-pointHoverRadius:6,
+pointRadius:3,
 fill:false,
 tension:0.25
-};
+
 }
 
-let lossChart = new Chart(
+}
+
+function chartOptions(){
+
+return{
+
+animation:false,
+responsive:true,
+
+plugins:{
+legend:{labels:{color:"white"}}
+},
+
+scales:{
+x:{ticks:{color:"white",maxTicksLimit:10}},
+y:{ticks:{color:"white"},grid:{color:"#334155"}}
+}
+
+}
+
+}
+
+function movingAverage(arr,window=10){
+
+let out=[]
+
+for(let i=0;i<arr.length;i++){
+
+let start=Math.max(0,i-window)
+
+let slice=arr.slice(start,i+1)
+
+let avg=slice.reduce((a,b)=>a+b,0)/slice.length
+
+out.push(avg)
+
+}
+
+return out
+
+}
+
+let lossChart=new Chart(
+
 document.getElementById("lossChart"),
+
 {
+
 type:"line",
+
 data:{
 labels:[],
 datasets:[
 dataset("Train Loss","cyan"),
-dataset("Validation Loss","orange")
+dataset("Smoothed Loss","white"),
+dataset("Val Loss","orange")
 ]
-},
-options:chartOptions()
-}
-);
 
-let lrChart = new Chart(
+},
+
+options:chartOptions()
+
+}
+
+)
+
+let lrChart=new Chart(
+
 document.getElementById("lrChart"),
-{
-type:"line",
-data:{
-labels:[],
-datasets:[dataset("Learning Rate","lime")]
-},
-options:chartOptions()
-}
-);
 
-let tokChart = new Chart(
+{
+
+type:"line",
+
+data:{labels:[],datasets:[dataset("LR","lime")]},
+
+options:chartOptions()
+
+}
+
+)
+
+let tokChart=new Chart(
+
 document.getElementById("tokChart"),
+
 {
-type:"line",
-data:{
-labels:[],
-datasets:[dataset("Tokens/sec","magenta")]
-},
-options:chartOptions()
-}
-);
 
-let gpuChart = new Chart(
-document.getElementById("gpuChart"),
+type:"line",
+
+data:{labels:[],datasets:[dataset("Tokens/sec","magenta")]},
+
+options:chartOptions()
+
+}
+
+)
+
+let gradChart=new Chart(
+
+document.getElementById("gradChart"),
+
 {
+
 type:"line",
-data:{
-labels:[],
-datasets:[dataset("GPU Memory","yellow")]
-},
+
+data:{labels:[],datasets:[dataset("Grad Norm","red")]},
+
 options:chartOptions()
+
 }
-);
 
-function updateTable(data){
-
-const tbody = document.querySelector("#metricsTable tbody");
-tbody.innerHTML = "";
-
-const latest = data.slice(-10).reverse();
-
-latest.forEach(m=>{
-
-const row = document.createElement("tr");
-
-row.innerHTML = `
-<td>${m.step ?? ""}</td>
-<td>${m.loss?.toFixed(4) ?? ""}</td>
-<td>${m.val_loss?.toFixed(4) ?? ""}</td>
-<td>${m.lr?.toExponential(2) ?? ""}</td>
-<td>${m.grad_norm?.toFixed(2) ?? ""}</td>
-<td>${m.tokens_per_sec ?? ""}</td>
-<td>${m.gpu_mem_gb?.toFixed(2) ?? ""}</td>
-`;
-
-tbody.appendChild(row);
-
-});
-}
+)
 
 async function updateCharts(){
 
-const res = await fetch("/metrics");
-const data = await res.json();
+const res=await fetch("/metrics")
 
-if(data.length === 0) return;
+const data=await res.json()
 
-const train = data.filter(x=>x.type==="train");
-const evals = data.filter(x=>x.type==="eval");
+if(data.length==0) return
 
-lossChart.data.labels = train.map(x=>x.step);
-lossChart.data.datasets[0].data = train.map(x=>x.loss);
+const train=data.filter(x=>x.type==="train")
 
-lossChart.data.datasets[1].data =
-evals.map(x=>({x:x.step,y:x.val_loss}));
+const evals=data.filter(x=>x.type==="eval")
 
-lrChart.data.labels = train.map(x=>x.step);
-lrChart.data.datasets[0].data =
-train.map(x=>x.lr);
+let steps=train.map(x=>x.step)
 
-tokChart.data.labels = train.map(x=>x.step);
-tokChart.data.datasets[0].data =
-train.map(x=>x.tokens_per_sec);
+let loss=train.map(x=>x.loss)
 
-gpuChart.data.labels = train.map(x=>x.step);
-gpuChart.data.datasets[0].data =
-train.map(x=>x.gpu_mem_gb);
+lossChart.data.labels=steps
 
-lossChart.update();
-lrChart.update();
-tokChart.update();
-gpuChart.update();
+lossChart.data.datasets[0].data=loss
+lossChart.data.datasets[1].data=movingAverage(loss)
 
-updateTable(data);
+lossChart.data.datasets[2].data=
+evals.map(x=>({x:x.step,y:x.val_loss}))
 
-}
+lrChart.data.labels=steps
+lrChart.data.datasets[0].data=train.map(x=>x.lr)
 
-async function clearMetrics(){
+tokChart.data.labels=steps
+tokChart.data.datasets[0].data=train.map(x=>x.tokens_per_sec)
 
-if(!confirm("Clear all dashboard data?")) return;
+gradChart.data.labels=steps
+gradChart.data.datasets[0].data=train.map(x=>x.grad_norm)
 
-await fetch("/clear",{method:"POST"});
+lossChart.update()
+lrChart.update()
+tokChart.update()
+gradChart.update()
 
-lossChart.data.labels=[];
-lossChart.data.datasets.forEach(d=>d.data=[]);
-
-lrChart.data.labels=[];
-lrChart.data.datasets.forEach(d=>d.data=[]);
-
-tokChart.data.labels=[];
-tokChart.data.datasets.forEach(d=>d.data=[]);
-
-gpuChart.data.labels=[];
-gpuChart.data.datasets.forEach(d=>d.data=[]);
-
-lossChart.update();
-lrChart.update();
-tokChart.update();
-gpuChart.update();
-
-document.querySelector("#metricsTable tbody").innerHTML="";
+updateTable(data)
+updatePosters(data)
 
 }
 
-setInterval(updateCharts,1000);
+function updatePosters(data){
+
+const latest=data[data.length-1]
+
+document.getElementById("stepPoster").innerText=latest.step
+
+if(latest.loss)
+document.getElementById("lossPoster").innerText=
+latest.loss.toFixed(3)
+
+if(latest.val_loss)
+document.getElementById("valPoster").innerText=
+latest.val_loss.toFixed(3)
+
+if(latest.tokens_per_sec)
+document.getElementById("tokPoster").innerText=
+latest.tokens_per_sec
+
+if(latest.lr)
+document.getElementById("lrPoster").innerText=
+latest.lr.toExponential(2)
+
+if(latest.grad_norm)
+document.getElementById("gradPoster").innerText=
+latest.grad_norm.toFixed(2)
+
+if(latest.gpu_mem_gb)
+document.getElementById("gpuPoster").innerText=
+latest.gpu_mem_gb.toFixed(2)
+
+document.getElementById("statusPoster").innerText="Running"
+
+}
+
+function updateTable(data){
+
+const tbody=document.querySelector("#metricsTable tbody")
+
+tbody.innerHTML=""
+
+const latest=data.slice(-10).reverse()
+
+latest.forEach(m=>{
+
+const row=document.createElement("tr")
+
+row.innerHTML=`
+
+<td>${m.step??""}</td>
+<td>${m.loss?.toFixed(4)??""}</td>
+<td>${m.val_loss?.toFixed(4)??""}</td>
+<td>${m.lr?.toExponential(2)??""}</td>
+<td>${m.grad_norm?.toFixed(2)??""}</td>
+<td>${m.tokens_per_sec??""}</td>
+<td>${m.gpu_mem_gb?.toFixed(2)??""}</td>
+
+`
+
+tbody.appendChild(row)
+
+})
+
+}
+
+setInterval(updateCharts,1000)
 
 </script>
 
