@@ -17,7 +17,7 @@ margin:0;
 
 .header{
 background:#1e293b;
-padding:15px;
+padding:16px;
 text-align:center;
 font-size:24px;
 font-weight:bold;
@@ -38,12 +38,10 @@ grid-gap:15px;
 }
 
 .poster{
-
 background:#1e293b;
 padding:20px;
 border-radius:10px;
 text-align:center;
-
 }
 
 .poster h2{
@@ -68,36 +66,8 @@ border-radius:8px;
 height:220px !important;
 }
 
-.table-container{
-grid-column:span 2;
-background:#1e293b;
-padding:15px;
-border-radius:10px;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th,td{
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#334155;
-}
-
-tr:nth-child(even){
-background:#1e293b;
-}
-
-tr:nth-child(odd){
-background:#0f172a;
-}
-
 </style>
+
 </head>
 
 <body>
@@ -110,45 +80,15 @@ LLM Training Dashboard
 
 <div class="metric-grid">
 
-<div class="poster">
-<p>Current Step</p>
-<h2 id="stepPoster">0</h2>
-</div>
+<div class="poster"><p>Step</p><h2 id="stepPoster">-</h2></div>
+<div class="poster"><p>Train Loss</p><h2 id="lossPoster">-</h2></div>
+<div class="poster"><p>Val Loss</p><h2 id="valPoster">-</h2></div>
+<div class="poster"><p>Tokens/sec</p><h2 id="tokPoster">-</h2></div>
 
-<div class="poster">
-<p>Train Loss</p>
-<h2 id="lossPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>Validation Loss</p>
-<h2 id="valPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>Tokens/sec</p>
-<h2 id="tokPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>Learning Rate</p>
-<h2 id="lrPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>Grad Norm</p>
-<h2 id="gradPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>GPU Memory</p>
-<h2 id="gpuPoster">-</h2>
-</div>
-
-<div class="poster">
-<p>Status</p>
-<h2 id="statusPoster">Waiting</h2>
-</div>
+<div class="poster"><p>Learning Rate</p><h2 id="lrPoster">-</h2></div>
+<div class="poster"><p>Grad Norm</p><h2 id="gradPoster">-</h2></div>
+<div class="poster"><p>GPU Memory</p><h2 id="gpuPoster">-</h2></div>
+<div class="poster"><p>Status</p><h2 id="statusPoster">Waiting</h2></div>
 
 </div>
 
@@ -172,40 +112,12 @@ LLM Training Dashboard
 <canvas id="gradChart"></canvas>
 </div>
 
-<div class="table-container">
-
-<h3>Latest Metrics</h3>
-
-<table id="metricsTable">
-
-<thead>
-
-<tr>
-<th>Step</th>
-<th>Train Loss</th>
-<th>Val Loss</th>
-<th>LR</th>
-<th>Grad</th>
-<th>Tokens/s</th>
-<th>GPU</th>
-</tr>
-
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-</div>
-
 </div>
 
 <script>
 
 function dataset(label,color){
-
 return{
-
 label:label,
 data:[],
 borderColor:color,
@@ -213,34 +125,24 @@ borderWidth:2,
 pointRadius:3,
 fill:false,
 tension:0.25
-
 }
-
 }
 
 function chartOptions(){
-
 return{
-
 animation:false,
 responsive:true,
-
-plugins:{
-legend:{labels:{color:"white"}}
-},
-
+plugins:{legend:{labels:{color:"white"}}},
 scales:{
 x:{ticks:{color:"white",maxTicksLimit:10}},
 y:{ticks:{color:"white"},grid:{color:"#334155"}}
 }
-
 }
-
 }
 
 function movingAverage(arr,window=10){
 
-let out=[]
+let result=[]
 
 for(let i=0;i<arr.length;i++){
 
@@ -250,125 +152,114 @@ let slice=arr.slice(start,i+1)
 
 let avg=slice.reduce((a,b)=>a+b,0)/slice.length
 
-out.push(avg)
+result.push(avg)
 
 }
 
-return out
+return result
 
 }
 
 let lossChart=new Chart(
-
 document.getElementById("lossChart"),
-
 {
-
 type:"line",
-
 data:{
 labels:[],
 datasets:[
 dataset("Train Loss","cyan"),
-dataset("Smoothed Loss","white"),
+dataset("Smoothed","white"),
 dataset("Val Loss","orange")
 ]
-
 },
-
 options:chartOptions()
-
 }
-
 )
 
 let lrChart=new Chart(
-
 document.getElementById("lrChart"),
-
 {
-
 type:"line",
-
 data:{labels:[],datasets:[dataset("LR","lime")]},
-
 options:chartOptions()
-
 }
-
 )
 
 let tokChart=new Chart(
-
 document.getElementById("tokChart"),
-
 {
-
 type:"line",
-
 data:{labels:[],datasets:[dataset("Tokens/sec","magenta")]},
-
 options:chartOptions()
-
 }
-
 )
 
 let gradChart=new Chart(
-
 document.getElementById("gradChart"),
-
 {
-
 type:"line",
-
 data:{labels:[],datasets:[dataset("Grad Norm","red")]},
-
 options:chartOptions()
-
 }
-
 )
 
 async function updateCharts(){
 
 const res=await fetch("/metrics")
-
 const data=await res.json()
 
-if(data.length==0) return
+if(!data || data.length===0){
+document.getElementById("statusPoster").innerText="Waiting"
+return
+}
 
 const train=data.filter(x=>x.type==="train")
 
 const evals=data.filter(x=>x.type==="eval")
 
-let steps=train.map(x=>x.step)
+const steps=[]
+const losses=[]
+const lr=[]
+const tok=[]
+const grad=[]
 
-let loss=train.map(x=>x.loss)
+train.forEach(m=>{
+
+steps.push(m.step)
+
+losses.push(m.loss ?? null)
+
+lr.push(m.lr ?? null)
+
+tok.push(m.tokens_per_sec ?? null)
+
+grad.push(m.grad_norm ?? null)
+
+})
 
 lossChart.data.labels=steps
 
-lossChart.data.datasets[0].data=loss
-lossChart.data.datasets[1].data=movingAverage(loss)
+lossChart.data.datasets[0].data=losses
+
+lossChart.data.datasets[1].data=movingAverage(losses.filter(x=>x!=null))
 
 lossChart.data.datasets[2].data=
 evals.map(x=>({x:x.step,y:x.val_loss}))
 
 lrChart.data.labels=steps
-lrChart.data.datasets[0].data=train.map(x=>x.lr)
+lrChart.data.datasets[0].data=lr
 
 tokChart.data.labels=steps
-tokChart.data.datasets[0].data=train.map(x=>x.tokens_per_sec)
+tokChart.data.datasets[0].data=tok
 
 gradChart.data.labels=steps
-gradChart.data.datasets[0].data=train.map(x=>x.grad_norm)
+gradChart.data.datasets[0].data=grad
 
 lossChart.update()
 lrChart.update()
 tokChart.update()
 gradChart.update()
 
-updateTable(data)
 updatePosters(data)
 
 }
@@ -377,63 +268,27 @@ function updatePosters(data){
 
 const latest=data[data.length-1]
 
-document.getElementById("stepPoster").innerText=latest.step
+document.getElementById("stepPoster").innerText=latest.step ?? "-"
 
-if(latest.loss)
-document.getElementById("lossPoster").innerText=
-latest.loss.toFixed(3)
+if(latest.loss!=null)
+document.getElementById("lossPoster").innerText=latest.loss.toFixed(3)
 
-if(latest.val_loss)
-document.getElementById("valPoster").innerText=
-latest.val_loss.toFixed(3)
+if(latest.val_loss!=null)
+document.getElementById("valPoster").innerText=latest.val_loss.toFixed(3)
 
-if(latest.tokens_per_sec)
-document.getElementById("tokPoster").innerText=
-latest.tokens_per_sec
+if(latest.tokens_per_sec!=null)
+document.getElementById("tokPoster").innerText=latest.tokens_per_sec
 
-if(latest.lr)
-document.getElementById("lrPoster").innerText=
-latest.lr.toExponential(2)
+if(latest.lr!=null)
+document.getElementById("lrPoster").innerText=latest.lr.toExponential(2)
 
-if(latest.grad_norm)
-document.getElementById("gradPoster").innerText=
-latest.grad_norm.toFixed(2)
+if(latest.grad_norm!=null)
+document.getElementById("gradPoster").innerText=latest.grad_norm.toFixed(2)
 
-if(latest.gpu_mem_gb)
-document.getElementById("gpuPoster").innerText=
-latest.gpu_mem_gb.toFixed(2)
+if(latest.gpu_mem_gb!=null)
+document.getElementById("gpuPoster").innerText=latest.gpu_mem_gb.toFixed(2)
 
 document.getElementById("statusPoster").innerText="Running"
-
-}
-
-function updateTable(data){
-
-const tbody=document.querySelector("#metricsTable tbody")
-
-tbody.innerHTML=""
-
-const latest=data.slice(-10).reverse()
-
-latest.forEach(m=>{
-
-const row=document.createElement("tr")
-
-row.innerHTML=`
-
-<td>${m.step??""}</td>
-<td>${m.loss?.toFixed(4)??""}</td>
-<td>${m.val_loss?.toFixed(4)??""}</td>
-<td>${m.lr?.toExponential(2)??""}</td>
-<td>${m.grad_norm?.toFixed(2)??""}</td>
-<td>${m.tokens_per_sec??""}</td>
-<td>${m.gpu_mem_gb?.toFixed(2)??""}</td>
-
-`
-
-tbody.appendChild(row)
-
-})
 
 }
 
