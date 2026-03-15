@@ -28,10 +28,8 @@ class Metric(BaseModel):
 
 
 def downsample(data, target=800):
-
     if len(data) <= target:
         return data
-
     step = len(data) // target
     return data[::step]
 
@@ -61,11 +59,6 @@ async def get_metrics(run_id: int = 1):
     return downsample(run)
 
 
-@app.get("/runs")
-async def runs():
-    return list(metrics_store.keys())
-
-
 @app.post("/clear")
 async def clear(run_id: int | None = None):
 
@@ -79,14 +72,12 @@ async def clear(run_id: int | None = None):
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
-
     with open("static/index.html") as f:
         return f.read()
 
 
 @app.get("/health")
 async def health():
-
     return {
         "status": "ok",
         "service": "training-dashboard",
