@@ -7,13 +7,13 @@ import time
 
 app = FastAPI()
 
-metrics_store = {}
+metrics_store = []
 
-MAX_POINTS = 5000
-MAX_RUNS = 20
+MAX_POINTS = 10000
 
 
 class Metric(BaseModel):
+
     run_id: int
     type: str
     step: int
@@ -27,46 +27,25 @@ class Metric(BaseModel):
     gpu_mem_gb: float | None = None
 
 
-def downsample(data, target=800):
-    if len(data) <= target:
-        return data
-    step = len(data) // target
-    return data[::step]
-
-
 @app.post("/train_metrics")
 async def receive_metrics(metric: Metric):
 
-    run = metrics_store.setdefault(metric.run_id, [])
+    metrics_store.append(metric.model_dump())
 
-    run.append(metric.dict())
-
-    if len(run) > MAX_POINTS:
-        run.pop(0)
-
-    if len(metrics_store) > MAX_RUNS:
-        oldest = list(metrics_store.keys())[0]
-        del metrics_store[oldest]
+    if len(metrics_store) > MAX_POINTS:
+        metrics_store.pop(0)
 
     return {"status": "ok"}
 
 
 @app.get("/metrics")
-async def get_metrics(run_id: int = 1):
-
-    run = metrics_store.get(run_id, [])
-
-    return downsample(run)
+async def get_metrics():
+    return metrics_store
 
 
 @app.post("/clear")
-async def clear(run_id: int | None = None):
-
-    if run_id is None:
-        metrics_store.clear()
-    else:
-        metrics_store.pop(run_id, None)
-
+async def clear():
+    metrics_store.clear()
     return {"status": "cleared"}
 
 
