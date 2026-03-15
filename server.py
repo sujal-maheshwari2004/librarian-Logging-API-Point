@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
+import time
 
 app = FastAPI()
 
@@ -39,17 +40,24 @@ async def get_metrics():
     return metrics_store
 
 
+@app.post("/clear")
+async def clear_metrics():
+    metrics_store.clear()
+    return {"status": "cleared"}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     with open("static/index.html") as f:
         return f.read()
+
 
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
         "service": "training-dashboard",
-        "timestamp": __import__("time").time()
+        "timestamp": time.time()
     }
 
 
