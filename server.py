@@ -43,6 +43,7 @@ PIPELINE_STAGES = [
     "tokenize",
     "pack",
     "train",
+    "evaluate",
 ]
 
 STAGE_LABELS = {
@@ -52,6 +53,7 @@ STAGE_LABELS = {
     "tokenize":        "Tokenization",
     "pack":            "Token Packing",
     "train":           "Model Training",
+    "evaluate":        "Evaluation",
 }
 
 
