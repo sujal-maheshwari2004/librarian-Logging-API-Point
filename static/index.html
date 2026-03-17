@@ -598,16 +598,46 @@ function chartDefaults(datasets) {
   };
 }
 
-function ds(label, color, dash=[]) {
+function ds(label, color, dash=[], pointR=0) {
   return { label, data: [], borderColor: color, backgroundColor: color+'18',
-           borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.3,
+           borderWidth: 1.5, pointRadius: pointR, pointHoverRadius: 5,
+           pointBackgroundColor: color, tension: 0.3,
            fill: false, borderDash: dash };
 }
 
 let lossChart, lrChart, tokChart, gradChart;
 
 function initCharts() {
-  lossChart = new Chart(document.getElementById('lossChart'), chartDefaults([ds('train','#00d4ff'), ds('val','#ff6b35',[4,2])]));
+  // Val uses its own x-axis (xVal) so sparse eval points always render correctly
+  // regardless of how few there are relative to train steps.
+  lossChart = new Chart(document.getElementById('lossChart'), {
+    type: 'line',
+    data: { datasets: [
+      ds('train', '#00d4ff'),
+      { ...ds('val', '#ff6b35', [4,2], 5), xAxisID: 'xVal' }
+    ]},
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      plugins: {
+        legend: { labels: { color: '#5a7a94', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 } },
+        tooltip: {
+          backgroundColor: '#111820', borderColor: '#1e2d3d', borderWidth: 1,
+          titleColor: '#c9d8e8', bodyColor: '#5a7a94',
+          titleFont: { family: 'JetBrains Mono', size: 10 },
+          bodyFont:  { family: 'JetBrains Mono', size: 10 },
+          callbacks: {
+            title: items => 'step ' + items[0].label
+          }
+        }
+      },
+      scales: {
+        x:    { type: 'category', ticks: { color: '#3d5a73', maxTicksLimit: 8, font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(30,45,61,.6)' } },
+        xVal: { type: 'category', display: false },
+        y:    { ticks: { color: '#3d5a73', font: { family: 'JetBrains Mono', size: 9 } }, grid: { color: 'rgba(30,45,61,.6)' } }
+      }
+    }
+  });
   lrChart   = new Chart(document.getElementById('lrChart'),   chartDefaults([ds('lr',   '#7fffb2')]));
   tokChart  = new Chart(document.getElementById('tokChart'),  chartDefaults([ds('tok/s','#ffda54')]));
   gradChart = new Chart(document.getElementById('gradChart'), chartDefaults([ds('grad', '#ff4757')]));
@@ -821,21 +851,21 @@ async function update() {
   const evalS  = sample(evals, 300);
   const steps  = trainS.map(m => m.step);
 
+  // Train dataset — shared x-axis labels
   lossChart.data.labels = steps;
   lossChart.data.datasets[0].data = trainS.map(m => m.loss ?? null);
-  lossChart.data.datasets[1].data = (() => {
-    const out = new Array(steps.length).fill(null);
-    evalS.forEach(ev => {
-      const idx = steps.reduce((b,s,i) => Math.abs(s-ev.step) < Math.abs(steps[b]-ev.step) ? i : b, 0);
-      out[idx] = ev.val_loss ?? null;
-    });
-    return out;
-  })();
+
+  // Val dataset — its own independent labels (one per eval point, always visible)
+  const evalFiltered = evalS.filter(m => m.val_loss != null);
+  lossChart.data.datasets[1].labels = evalFiltered.map(m => String(m.step));
+  lossChart.data.datasets[1].data   = evalFiltered.map(m => ({ x: String(m.step), y: m.val_loss }));
 
   lrChart.data.labels = steps;   lrChart.data.datasets[0].data   = trainS.map(m => m.lr ?? null);
   tokChart.data.labels = steps;  tokChart.data.datasets[0].data  = trainS.map(m => m.tokens_per_sec ?? null);
   gradChart.data.labels = steps; gradChart.data.datasets[0].data = trainS.map(m => m.grad_norm ?? null);
 
+  // Sync xVal scale labels so the hidden axis knows the val step positions
+  lossChart.options.scales.xVal.labels = lossChart.data.datasets[1].labels || [];
   lossChart.update('none'); lrChart.update('none'); tokChart.update('none'); gradChart.update('none');
 
   // ── Table ──
