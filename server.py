@@ -17,7 +17,7 @@ app = FastAPI()
 # ────────────────────────────────────────────────────────────
 # Auth
 # ────────────────────────────────────────────────────────────
-DASHBOARD_KEY = os.environ.get("DASHBOARD_KEY", "changeme")
+DASHBOARD_KEY = os.environ.get("DASHBOARD_KEY", "lib-450M-large")
 security = HTTPBearer(auto_error=False)
 
 
@@ -244,7 +244,6 @@ def _build_summary(run_metrics: list[dict]) -> dict:
         "avg_grad_norm":       avg_grad,
         "max_grad_norm":       max_grad,
         "peak_gpu_gb":         peak_gpu,
-        # tokens_seen kept for backward compat but budget endpoint is more accurate
         "total_tokens_seen":   sum(m.get("tokens_per_sec", 0) or 0 for m in train),
         "run_start_timestamp": run_metrics[0]["timestamp"] if run_metrics else None,
         "last_timestamp":      run_metrics[-1]["timestamp"] if run_metrics else None,
